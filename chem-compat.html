@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chemical Compatibility Checker</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --text:#1a1d23; --muted:#6b7280;
+    --border:#e2e4e9; --accent:#2563eb; --accent-dark:#1d4ed8;
+    --safe:#16a34a; --safe-bg:#ecfdf3;
+    --caution:#d97706; --caution-bg:#fffbeb;
+    --danger:#dc2626; --danger-bg:#fef2f2;
+    --unknown:#6b7280; --unknown-bg:#f3f4f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f1115; --card:#181b21; --text:#eef0f3; --muted:#9aa1ac;
+      --border:#2a2e37; --accent:#3b82f6; --accent-dark:#60a5fa;
+      --safe:#4ade80; --safe-bg:#0f2417;
+      --caution:#fbbf24; --caution-bg:#2a2107;
+      --danger:#f87171; --danger-bg:#2a1414;
+      --unknown:#9aa1ac; --unknown-bg:#1f232b;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1115; --card:#181b21; --text:#eef0f3; --muted:#9aa1ac;
+    --border:#2a2e37; --accent:#3b82f6; --accent-dark:#60a5fa;
+    --safe:#4ade80; --safe-bg:#0f2417;
+    --caution:#fbbf24; --caution-bg:#2a2107;
+    --danger:#f87171; --danger-bg:#2a1414;
+    --unknown:#9aa1ac; --unknown-bg:#1f232b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh; padding:20px 14px 60px;
+  }
+  .wrap{max-width:720px; margin:0 auto;}
+  header{text-align:center; margin-bottom:22px;}
+  header h1{font-size:1.5rem; margin:0 0 6px; letter-spacing:-0.02em;}
+  header p{color:var(--muted); font-size:0.9rem; margin:0;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:18px; margin-bottom:16px;
+  }
+  .selectors{display:flex; gap:12px; flex-wrap:wrap;}
+  .field{flex:1; min-width:220px;}
+  label{display:block; font-size:0.78rem; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;}
+  select, input[type=text]{
+    width:100%; padding:11px 12px; border-radius:9px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:0.95rem; outline:none;
+  }
+  select:focus, input:focus{border-color:var(--accent);}
+  .swap-row{display:flex; justify-content:center; margin:10px 0 0;}
+  .swap-btn{
+    background:none; border:1px solid var(--border); color:var(--muted);
+    border-radius:8px; padding:6px 12px; font-size:0.8rem; cursor:pointer;
+  }
+  .swap-btn:hover{color:var(--text); border-color:var(--accent);}
+  .check-btn{
+    width:100%; margin-top:14px; padding:13px; border:none; border-radius:10px;
+    background:var(--accent); color:#fff; font-size:1rem; font-weight:600; cursor:pointer;
+  }
+  .check-btn:hover{background:var(--accent-dark);}
+  .check-btn:disabled{opacity:0.5; cursor:not-allowed;}
+
+  .result{border-radius:14px; padding:20px; border:1px solid var(--border); animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+  .result.safe{background:var(--safe-bg); border-color:var(--safe);}
+  .result.caution{background:var(--caution-bg); border-color:var(--caution);}
+  .result.danger{background:var(--danger-bg); border-color:var(--danger);}
+  .result.unknown{background:var(--unknown-bg); border-color:var(--unknown);}
+  .result-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .badge{
+    font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;
+    padding:4px 10px; border-radius:999px; color:#fff;
+  }
+  .result.safe .badge{background:var(--safe);}
+  .result.caution .badge{background:var(--caution);}
+  .result.danger .badge{background:var(--danger);}
+  .result.unknown .badge{background:var(--unknown);}
+  .result-title{font-size:1.05rem; font-weight:700;}
+  .result-body{font-size:0.92rem; line-height:1.5; color:var(--text);}
+  .result-body b{font-weight:600;}
+  .tag-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .tag{
+    font-size:0.75rem; background:var(--card); border:1px solid var(--border);
+    padding:4px 9px; border-radius:7px; color:var(--muted);
+  }
+
+  .hazard-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;}
+  @media (max-width:480px){.hazard-grid{grid-template-columns:1fr;}}
+  .hazard-card{background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:12px;}
+  .hazard-card h4{margin:0 0 6px; font-size:0.88rem;}
+  .hazard-card .h-tags{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .hclass{
+    font-size:0.68rem; padding:2px 7px; border-radius:6px; background:var(--card);
+    border:1px solid var(--border); color:var(--muted);
+  }
+
+  .storage-note{
+    margin-top:14px; padding:12px; background:var(--card); border-radius:10px;
+    border:1px dashed var(--border); font-size:0.85rem; color:var(--muted);
+  }
+
+  footer{text-align:center; color:var(--muted); font-size:0.75rem; margin-top:30px;}
+  .empty-state{text-align:center; color:var(--muted); font-size:0.88rem; padding:20px 8px;}
+  .search-hint{font-size:0.72rem; color:var(--muted); margin-top:5px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚗️ Chemical Compatibility Checker</h1>
+    <p>Check hazard interactions before you mix, store, or dispose of chemicals.</p>
+  </header>
+
+  <div class="card">
+    <div class="selectors">
+      <div class="field">
+        <label for="chemA">Chemical A</label>
+        <input list="chemList" id="chemA" type="text" placeholder="e.g. Bleach" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="chemB">Chemical B</label>
+        <input list="chemList" id="chemB" type="text" placeholder="e.g. Ammonia" autocomplete="off">
+      </div>
+    </div>
+    <datalist id="chemList"></datalist>
+    <div class="search-hint">Start typing — common name or formula. Try: bleach, ammonia, sulfuric acid, sodium, acetone, hydrogen peroxide, potassium permanganate.</div>
+    <div class="swap-row">
+      <button class="swap-btn" id="swapBtn" type="button">⇅ Swap</button>
+    </div>
+    <button class="check-btn" id="checkBtn" type="button">Check Compatibility</button>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <footer>Built for HackDevengers 2.0 · Data curated for common lab chemicals — always confirm with your institution's SDS/EHS office before handling real chemicals.</footer>
+</div>
+
+<script>
+// ---------- Chemical database ----------
+// hazards: GHS-style hazard classes (simplified for demo)
+const CHEMICALS = {
+  "bleach": {name:"Bleach (Sodium Hypochlorite)", formula:"NaOCl", hazards:["Oxidizer","Corrosive","Toxic fumes"]},
+  "ammonia": {name:"Ammonia", formula:"NH₃", hazards:["Toxic","Corrosive","Irritant"]},
+  "sulfuric acid": {name:"Sulfuric Acid", formula:"H₂SO₄", hazards:["Corrosive","Strong Acid","Oxidizer"]},
+  "sodium hydroxide": {name:"Sodium Hydroxide (Lye)", formula:"NaOH", hazards:["Corrosive","Strong Base"]},
+  "hydrochloric acid": {name:"Hydrochloric Acid", formula:"HCl", hazards:["Corrosive","Strong Acid","Toxic fumes"]},
+  "acetone": {name:"Acetone", formula:"C₃H₆O", hazards:["Flammable","Irritant"]},
+  "hydrogen peroxide": {name:"Hydrogen Peroxide", formula:"H₂O₂", hazards:["Oxidizer","Corrosive"]},
+  "potassium permanganate": {name:"Potassium Permanganate", formula:"KMnO₄", hazards:["Strong Oxidizer","Irritant"]},
+  "sodium": {name:"Sodium Metal", formula:"Na", hazards:["Highly Reactive","Flammable","Water-reactive"]},
+  "chlorine": {name:"Chlorine Gas", formula:"Cl₂", hazards:["Toxic","Oxidizer","Corrosive"]},
+  "nitric acid": {name:"Nitric Acid", formula:"HNO₃", hazards:["Corrosive","Strong Oxidizer","Toxic fumes"]},
+  "ethanol": {name:"Ethanol", formula:"C₂H₆O", hazards:["Flammable"]},
+  "acetic acid": {name:"Acetic Acid (Glacial)", formula:"CH₃COOH", hazards:["Corrosive","Flammable"]},
+  "calcium hypochlorite": {name:"Calcium Hypochlorite", formula:"Ca(OCl)₂", hazards:["Oxidizer","Corrosive"]},
+  "toluene": {name:"Toluene", formula:"C₇H₈", hazards:["Flammable","Toxic"]},
+  "hydrogen sulfide": {name:"Hydrogen Sulfide", formula:"H₂S", hazards:["Highly Toxic","Flammable"]},
+  "phosphorus": {name:"Phosphorus (White)", formula:"P₄", hazards:["Pyrophoric","Highly Toxic"]},
+  "potassium chlorate": {name:"Potassium Chlorate", formula:"KClO₃", hazards:["Strong Oxidizer","Explosive risk"]},
+  "sulfur": {name:"Sulfur (Powder)", formula:"S₈", hazards:["Flammable (fine powder)"]},
+  "magnesium": {name:"Magnesium Metal", formula:"Mg", hazards:["Flammable","Water-reactive (as powder)"]},
+  "ether": {name:"Diethyl Ether", formula:"C₄H₁₀O", hazards:["Highly Flammable","Peroxide-forming"]},
+  "formaldehyde": {name:"Formaldehyde", formula:"CH₂O", hazards:["Toxic","Carcinogen","Irritant"]},
+  "silver nitrate": {name:"Silver Nitrate", formula:"AgNO₃", hazards:["Oxidizer","Corrosive"]},
+  "acetylene": {name:"Acetylene Gas", formula:"C₂H₂", hazards:["Highly Flammable","Explosive risk"]},
+  "copper": {name:"Copper Metal", formula:"Cu", hazards:["Generally low hazard"]},
+  "water": {name:"Water", formula:"H₂O", hazards:["None"]},
+};
+
+// Incompatibility matrix — key format: "a|b" alphabetically sorted keys
+const INCOMPATIBLE = [
+  {a:"bleach", b:"ammonia", level:"danger", reason:"Produces toxic chloramine vapors, which can cause respiratory damage even at low concentrations."},
+  {a:"bleach", b:"hydrochloric acid", level:"danger", reason:"Reacts to release toxic chlorine gas."},
+  {a:"bleach", b:"acetic acid", level:"danger", reason:"Acid + hypochlorite releases chlorine gas."},
+  {a:"sulfuric acid", b:"sodium hydroxide", level:"caution", reason:"Violently exothermic neutralization — can boil, splatter, or crack glass if not cooled and added slowly."},
+  {a:"hydrochloric acid", b:"sodium hydroxide", level:"caution", reason:"Strong exothermic neutralization; generates significant heat and can splash."},
+  {a:"sodium", b:"water", level:"danger", reason:"Violent reaction producing hydrogen gas and heat — can ignite or explode on contact."},
+  {a:"hydrogen peroxide", b:"potassium permanganate", level:"danger", reason:"Strong oxidizer + peroxide can react explosively, especially concentrated."},
+  {a:"acetone", b:"hydrogen peroxide", level:"danger", reason:"Can form organic peroxides that are shock-sensitive and explosive (basis of TATP)."},
+  {a:"nitric acid", b:"acetone", level:"danger", reason:"Strong oxidizer with a ketone can cause violent, potentially explosive reactions."},
+  {a:"nitric acid", b:"ethanol", level:"danger", reason:"Oxidizer + alcohol reaction is highly exothermic and can be explosive in concentrated form."},
+  {a:"phosphorus", b:"potassium chlorate", level:"danger", reason:"Classic explosive/friction-sensitive mixture — used historically in match heads; extremely hazardous combined."},
+  {a:"sulfur", b:"potassium chlorate", level:"danger", reason:"Oxidizer + fuel; friction or heat can trigger violent combustion or explosion."},
+  {a:"magnesium", b:"water", level:"caution", reason:"Powdered magnesium reacts with water/steam, releasing flammable hydrogen gas; more hazardous when burning (do not use water to extinguish)."},
+  {a:"silver nitrate", b:"ammonia", level:"caution", reason:"Can form silver fulminate over time, a highly sensitive explosive compound — avoid prolonged storage of the mixture."},
+  {a:"chlorine", b:"ammonia", level:"danger", reason:"Produces toxic, corrosive chloramine gases."},
+  {a:"calcium hypochlorite", b:"ammonia", level:"danger", reason:"Same hazard family as bleach + ammonia — toxic chloramine gas formation."},
+  {a:"ether", b:"water", level:"caution", reason:"Not reactive, but ether's low flash point and peroxide formation make co-storage near water/humidity a shelf-life risk, not a safety mix — still keep segregated from oxidizers."},
+  {a:"formaldehyde", b:"bleach", level:"caution", reason:"Can react to form other reactive/toxic byproducts including bis(chloromethyl) ether under certain conditions."},
+  {a:"acetylene", b:"chlorine", level:"danger", reason:"Highly flammable gas with a strong oxidizer — significant fire/explosion risk."},
+];
+
+function keyOf(a,b){ return [a,b].sort().join("|"); }
+const INCOMPAT_MAP = {};
+INCOMPATIBLE.forEach(r => { INCOMPAT_MAP[keyOf(r.a,r.b)] = r; });
+
+// General class-based caution rules (fallback logic when no explicit pair exists)
+function classBasedCheck(chemA, chemB){
+  const hazA = chemA.hazards.join(" ").toLowerCase();
+  const hazB = chemB.hazards.join(" ").toLowerCase();
+  const isOxidizer = h => h.includes("oxidizer");
+  const isFlammable = h => h.includes("flammable") || h.includes("pyrophoric");
+  const isAcid = h => h.includes("acid");
+  const isBase = h => h.includes("base");
+  const isCorrosive = h => h.includes("corrosive");
+
+  if (isOxidizer(hazA) && isFlammable(hazB)) return {level:"caution", reason:`${chemA.name} is an oxidizer and ${chemB.name} is flammable — store and handle separately to avoid fire risk.`};
+  if (isOxidizer(hazB) && isFlammable(hazA)) return {level:"caution", reason:`${chemB.name} is an oxidizer and ${chemA.name} is flammable — store and handle separately to avoid fire risk.`};
+  if ((isAcid(hazA) && isBase(hazB)) || (isAcid(hazB) && isBase(hazA))) return {level:"caution", reason:"Mixing a strong acid and strong base causes a rapid exothermic neutralization — add slowly, with cooling, never the reverse order."};
+  if (isCorrosive(hazA) && isCorrosive(hazB)) return {level:"caution", reason:"Both chemicals are corrosive — co-storage increases risk if a container fails; keep in separate secondary containment."};
+  return null;
+}
+
+// ---------- UI wiring ----------
+const chemListEl = document.getElementById("chemList");
+Object.entries(CHEMICALS).forEach(([key, c]) => {
+  const opt = document.createElement("option");
+  opt.value = c.name;
+  chemListEl.appendChild(opt);
+});
+
+function resolveInput(val){
+  if(!val) return null;
+  const v = val.trim().toLowerCase();
+  if (CHEMICALS[v]) return {key:v, ...CHEMICALS[v]};
+  for (const [key, c] of Object.entries(CHEMICALS)){
+    if (c.name.toLowerCase() === v || c.formula.toLowerCase() === v) return {key, ...c};
+  }
+  // partial match fallback
+  for (const [key, c] of Object.entries(CHEMICALS)){
+    if (c.name.toLowerCase().includes(v)) return {key, ...c};
+  }
+  return null;
+}
+
+document.getElementById("swapBtn").addEventListener("click", () => {
+  const a = document.getElementById("chemA");
+  const b = document.getElementById("chemB");
+  const tmp = a.value; a.value = b.value; b.value = tmp;
+});
+
+document.getElementById("checkBtn").addEventListener("click", runCheck);
+[document.getElementById("chemA"), document.getElementById("chemB")].forEach(el=>{
+  el.addEventListener("keydown", e => { if(e.key==="Enter") runCheck(); });
+});
+
+function hazardCardHTML(c){
+  return `<div class="hazard-card">
+    <h4>${c.name} <span style="color:var(--muted); font-weight:400;">(${c.formula})</span></h4>
+    <div class="h-tags">${c.hazards.map(h=>`<span class="hclass">${h}</span>`).join("")}</div>
+  </div>`;
+}
+
+function runCheck(){
+  const rawA = document.getElementById("chemA").value;
+  const rawB = document.getElementById("chemB").value;
+  const resultArea = document.getElementById("resultArea");
+
+  const chemA = resolveInput(rawA);
+  const chemB = resolveInput(rawB);
+
+  if (!rawA || !rawB){
+    resultArea.innerHTML = `<div class="card empty-state">Enter two chemicals to check compatibility.</div>`;
+    return;
+  }
+  if (!chemA || !chemB){
+    const missing = !chemA ? rawA : rawB;
+    resultArea.innerHTML = `<div class="result unknown">
+      <div class="result-head"><span class="badge">Unknown</span><span class="result-title">"${missing}" not in database</span></div>
+      <div class="result-body">This demo covers a curated set of common lab chemicals. Try one from the suggestion list, or extend the <code>CHEMICALS</code> object in the code to add more.</div>
+    </div>`;
+    return;
+  }
+  if (chemA.key === chemB.key){
+    resultArea.innerHTML = `<div class="result safe">
+      <div class="result-head"><span class="badge">Same</span><span class="result-title">Same chemical selected twice</span></div>
+      <div class="result-body">Pick two different chemicals to check for a reaction risk.</div>
+    </div>`;
+    return;
+  }
+
+  const pairMatch = INCOMPAT_MAP[keyOf(chemA.key, chemB.key)];
+  let level, reason, storageNote;
+
+  if (pairMatch){
+    level = pairMatch.level;
+    reason = pairMatch.reason;
+  } else {
+    const classMatch = classBasedCheck(chemA, chemB);
+    if (classMatch){
+      level = classMatch.level;
+      reason = classMatch.reason;
+    } else {
+      level = "safe";
+      reason = "No known hazardous interaction between these two in this database. This does not guarantee absolute safety — always verify against official SDS sheets for your specific chemical grades and concentrations.";
+    }
+  }
+
+  const labelMap = {danger:"🚫 Dangerous", caution:"⚠️ Caution", safe:"✅ Likely Safe", unknown:"❓ Unknown"};
+  const titleMap = {
+    danger: `${chemA.name} + ${chemB.name} — Do Not Mix`,
+    caution: `${chemA.name} + ${chemB.name} — Handle With Care`,
+    safe: `${chemA.name} + ${chemB.name} — No Known Hazard`
+  };
+
+  if (level === "danger") storageNote = "Store in separate cabinets or segregated storage areas. Never combine, even for disposal — use designated hazardous waste channels.";
+  else if (level === "caution") storageNote = "Can often be stored in the same area with secondary containment, but avoid direct contact or mixing without proper controls (fume hood, PPE, slow addition).";
+  else storageNote = "Standard storage practices apply — segregate by general hazard class (flammables, oxidizers, corrosives) as a routine precaution.";
+
+  resultArea.innerHTML = `
+    <div class="result ${level}">
+      <div class="result-head">
+        <span class="badge">${labelMap[level]}</span>
+        <span class="result-title">${titleMap[level]}</span>
+      </div>
+      <div class="result-body"><b>Why:</b> ${reason}</div>
+      <div class="hazard-grid">
+        ${hazardCardHTML(chemA)}
+        ${hazardCardHTML(chemB)}
+      </div>
+      <div class="storage-note"><b>Storage guidance:</b> ${storageNote}</div>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
