@@ -32,7 +32,7 @@ Open `chem-compat.html` in any browser.
 
 ## 🔗 Live Demo
 
-[Try it here](https://claude.ai/artifact/6Pqf5TUzZRy5LuSyore7Qz)
+[Try it here](https://atulk773955-crypto.github.io/chem-compatibility-checker/chem-compat.html)
 
 ---
 Built for **HackDevengers 2.0** 🏆
